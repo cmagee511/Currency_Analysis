@@ -2,11 +2,10 @@ import pandas as pd
 import requests 
 import os
 from pathlib import Path
+from mysql import connector
 from dotenv import load_dotenv
 
-
 #Load environment
-
 load_dotenv()
 
 base_url = os.getenv("API_URL")
@@ -86,14 +85,63 @@ print("\nDate Coverage:")
 print("Start Date:", df["date"].min())
 print("End Date:", df["date"].max())
 
-#Export to csv to raw data folder
+#Server Connection
+SQL_HOST = os.getenv("SQL_HOST")
+SQL_PORT = os.getenv("SQL_PORT")
+SQL_USER = os.getenv("SQL_USER")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD")
+SQL_DATABASE = os.getenv("SQL_DB")
 
-output_folder = Path("data")
+server_connection = connector.connect(
+    host=SQL_HOST,
+    port=SQL_PORT,
+    user=SQL_USER,
+    password=SQL_PASSWORD,
+    connection_timeout=10,
+    autocommit=False,
+    raise_on_warnings=True
+)
 
-output_folder.mkdir(parents=True, exist_ok=True)
+server_cursor = server_connection.cursor()
+print(f"You have connected to MySQL server!")
+server_cursor.close()
+server_connection.close()
 
-output_file = output_folder / "exchange_rates.csv"
+db_connection = connector.connect(
+    host=SQL_HOST,
+    port=SQL_PORT,
+    user=SQL_USER,
+    password=SQL_PASSWORD,
+    database=SQL_DATABASE
 
-df.to_csv(output_file, index=False)
+)
+db_cursor = db_connection.cursor()
+print(f"You have connected to Database")
 
-print("\n Data has been Exported to:",output_file)
+#Insert Data to MySQL
+
+insert_query = """
+INSERT INTO exchange_rates (date, base, quote, rate)
+VALUES (%s, %s, %s, %s)
+"""
+
+records = [
+    (
+        row.date.to_pydatetime(),
+        row.base,
+        row.quote,
+        float(row.rate)
+    )
+    for row in df.itertuples(index=False)
+]
+
+db_cursor.executemany(insert_query, records)
+
+db_connection.commit()
+
+print(f"{db_cursor.rowcount} records inserted successfully!")
+
+# Close Database Connection
+
+db_cursor.close()
+db_connection.close()
