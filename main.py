@@ -119,12 +119,10 @@ db_cursor = db_connection.cursor()
 print(f"You have connected to Database")
 
 #Insert Data to MySQL
-
-insert_query = """
+INSERT_SQL = """
 INSERT INTO exchange_rates (date, base, quote, rate)
 VALUES (%s, %s, %s, %s)
 """
-
 records = [
     (
         row.date.to_pydatetime(),
@@ -135,13 +133,18 @@ records = [
     for row in df.itertuples(index=False)
 ]
 
-db_cursor.executemany(insert_query, records)
-
-db_connection.commit()
-
-print(f"{db_cursor.rowcount} records inserted successfully!")
-
+try:
+    db_cursor.executemany(INSERT_SQL,records)
+    db_connection.commit()
+    print(f"{db_cursor.rowcount} records inserted successfully!")
+except Exception as e:
+    db_connection.rollback()
+    print(f"Error Rolled back: {e}")
 # Close Database Connection
-
-db_cursor.close()
+finally:
+    db_cursor.close()
 db_connection.close()
+print("Database Closed")
+
+
+
