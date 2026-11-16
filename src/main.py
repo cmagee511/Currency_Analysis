@@ -89,6 +89,11 @@ print("End Date:", df["date"].max())
 #Export to csv to raw data folder
 
 output_folder = Path("data")
+
 output_folder.mkdir(parents=True, exist_ok=True)
+
 output_file = output_folder / "exchange_rates.csv"
+
 df.to_csv(output_file, index=False)
+
+print("\n Data has been Exported to:",output_file)
